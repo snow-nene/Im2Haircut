@@ -81,14 +81,15 @@ class PriorTrainer(BaseTrainer):
                  upsample_hairstyle=False, 
                  upsample_resolution=64,
                  num_steps_coarse=200,
-                 optimize_appearance=False
+                 optimize_appearance=False,
+                 slim_output=False
                  ):
         
         nn.Module.__init__(self)
         
         self._init_basic_config(num_steps_coarse, device, ngpus, accumulate_gradients,
                             upsample_hairstyle, upsample_resolution, optimize_appearance, config, 
-                            unfreeze_time_for_pca)
+                            unfreeze_time_for_pca, slim_output)
 
         self._init_dataset(config, scene, folder_name, world_size, rank, num_workers)
 
@@ -156,7 +157,8 @@ def main(args, dataset, opt,  pipe, pointcloud_path_head,  ip=None, port=None):
 
     conf = ConfigFactory.parse_string(conf_text)
 
-    file_backup(os.path.join(args.savedir, 'recording'), args.conf_path, dir_lis=conf['general']['base_exp_dir'])
+    if not args.slim_output:
+        file_backup(os.path.join(args.savedir, 'recording'), args.conf_path, dir_lis=conf['general']['base_exp_dir'])
     
     dist.init()
     rank = dist.get_local_rank()
@@ -166,7 +168,7 @@ def main(args, dataset, opt,  pipe, pointcloud_path_head,  ip=None, port=None):
     print(f'Starting in machine {device} which is at rank {global_rank} of world size {world_size} and rank {rank}')
     dist.print0(f'\n\nDistributing across {world_size} GPUs\n\n')
        
-    training = PriorTrainer(conf, world_size, rank, device, global_rank, ckpt_path=args.ckpt_path, savedir=args.savedir,    unfreeze_time_for_pca=args.unfreeze_time_for_pca, ngpus=args.ngpus, num_workers=args.num_workers, accumulate_gradients=args.accumulate_gradients, dataset=dataset, opt=opt,  pipe=pipe,  pointcloud_path_head=pointcloud_path_head, ip=ip, port=port, folder_name=args.folder_name, scene=args.scene, upsample_hairstyle=args.upsample_hairstyle,  upsample_resolution=args.upsample_resolution, optimize_appearance=args.optimize_appearance, num_steps_coarse=args.num_steps_coarse)
+    training = PriorTrainer(conf, world_size, rank, device, global_rank, ckpt_path=args.ckpt_path, savedir=args.savedir,    unfreeze_time_for_pca=args.unfreeze_time_for_pca, ngpus=args.ngpus, num_workers=args.num_workers, accumulate_gradients=args.accumulate_gradients, dataset=dataset, opt=opt,  pipe=pipe,  pointcloud_path_head=pointcloud_path_head, ip=ip, port=port, folder_name=args.folder_name, scene=args.scene, upsample_hairstyle=args.upsample_hairstyle,  upsample_resolution=args.upsample_resolution, optimize_appearance=args.optimize_appearance, num_steps_coarse=args.num_steps_coarse, slim_output=args.slim_output)
 
     
                 
@@ -187,6 +189,7 @@ if __name__ == "__main__":
     parser.add_argument('--unfreeze_time_for_pca', default=-1, type=int)
     parser.add_argument('--upsample_hairstyle', default=False, type=bool)
     parser.add_argument("--folder_name", type=str, default = '')
+    parser.add_argument('--slim_output', action='store_true', help='Slim output mode: skip logging, checkpoints and intermediate PLYs')
     lp = ModelParams(parser)
     op = OptimizationParams(parser)
     pp = PipelineParams(parser)

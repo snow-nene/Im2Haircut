@@ -57,11 +57,21 @@ import trimesh
 
              
 
+class _DummyWriter:
+    """No-op TensorBoard writer used in slim_output mode to avoid writing event files."""
+    def add_scalar(self, *a, **kw): pass
+    def close(self): pass
+
+
 class BaseTrainer(nn.Module): 
           
     def _init_basic_config(self, num_steps_coarse, device, ngpus, accumulate_gradients,
                        upsample_hairstyle, upsample_resolution, optimize_appearance, config,
-                       unfreeze_time_for_pca):
+                       unfreeze_time_for_pca, slim_output=False):
+
+        self.slim_output = slim_output
+        self.last_pred_points_vis = None
+
 
         self.num_steps_coarse = num_steps_coarse
         self.device = device
@@ -249,7 +259,10 @@ class BaseTrainer(nn.Module):
 #         os.makedirs(os.path.join(savedir, 'checkpoints'), exist_ok=True)
 
         self.savedir = savedir
-        self.writer = SummaryWriter(log_dir=os.path.join(savedir, 'logs'))
+        if self.slim_output:
+            self.writer = _DummyWriter()
+        else:
+            self.writer = SummaryWriter(log_dir=os.path.join(savedir, 'logs'))
         self.step = 0
         self.epoch = 0
        
@@ -318,10 +331,11 @@ class BaseTrainer(nn.Module):
             )
 
         # Save point clouds
-        if self.step % self.pc_freq == 0 and rank == 0:
-
-            save_path = os.path.join(self.savedir, f"pointclouds_{mode}", f'pred_{self.step:06d}.ply')
-            save_strands(pred_points_vis[0], save_path, num_points=self.num_points, cols=self.colors_save)
+        self.last_pred_points_vis = pred_points_vis[0].detach().cpu()
+        if not self.slim_output:
+            if self.step % self.pc_freq == 0 and rank == 0:
+                save_path = os.path.join(self.savedir, f"pointclouds_{mode}", f'pred_{self.step:06d}.ply')
+                save_strands(pred_points_vis[0], save_path, num_points=self.num_points, cols=self.colors_save)
 
         # Log losses
         logs = {f'bs_{mode}': 1, f'full_loss_{mode}': loss.detach().cpu().numpy()}
@@ -501,6 +515,8 @@ class BaseTrainer(nn.Module):
         
     @torch.no_grad()
     def save_model(self):
+        if self.slim_output:
+            return
         local_rank = dist.get_local_rank()
         print(f'Saving model on GPU {local_rank}')
 
@@ -552,5 +568,10 @@ class BaseTrainer(nn.Module):
                 if self.epoch > self.all_steps:
                     break 
                     
+            if self.slim_output and rank == 0 and self.last_pred_points_vis is not None:
+                print('Saving final point cloud in slim output mode...')
+                save_path = os.path.join(self.savedir, "pointclouds_train", f'pred_{self.step:06d}.ply')
+                os.makedirs(os.path.dirname(save_path), exist_ok=True)
+                save_strands(self.last_pred_points_vis, save_path, num_points=self.num_points, cols=self.colors_save)
         except KeyboardInterrupt:
             pass

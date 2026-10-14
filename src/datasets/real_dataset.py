@@ -207,7 +207,7 @@ class HairstyleRealDataset(Dataset):
             gt_image, gt_mask_hair, gt_mask_body,
             gt_orient_angle, gt_orient_conf,
             gt_depth, gt_strand_map
-        ], dim=0)
+        ], dim=0).float()
 
         if flip:
             feats_gaus = torch.flip(feats_gaus, dims=[-1])
