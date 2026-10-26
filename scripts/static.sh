@@ -26,22 +26,22 @@ export CUDA_VISIBLE_DEVICES=$GPU
 
 
 # Activate conda environment
-if [ -f "$HOME/miniconda3/etc/profile.d/conda.sh" ]; then
-    source "$HOME/miniconda3/etc/profile.d/conda.sh"
-    PYTHON_ENV="$HOME/miniconda3/bin/activate"
-    source "$PYTHON_ENV"
-    
-elif [ -f "$HOME/anaconda3/etc/profile.d/conda.sh" ]; then
-    source "$HOME/anaconda3/etc/profile.d/conda.sh"
-    PYTHON_ENV="$HOME/anaconda3/bin/activate"
-    source "$PYTHON_ENV"
-    
-else
-    echo "Conda not found in standard locations!"
-fi
+# if [ -f "$HOME/miniconda3/etc/profile.d/conda.sh" ]; then
+#     source "$HOME/miniconda3/etc/profile.d/conda.sh"
+#     PYTHON_ENV="$HOME/miniconda3/bin/activate"
+#     source "$PYTHON_ENV"
+
+# elif [ -f "$HOME/anaconda3/etc/profile.d/conda.sh" ]; then
+#     source "$HOME/anaconda3/etc/profile.d/conda.sh"
+#     PYTHON_ENV="$HOME/anaconda3/bin/activate"
+#     source "$PYTHON_ENV"
+
+# else
+#     echo "Conda not found in standard locations!"
+# fi
 
 
-conda activate im2haircut 
+# conda activate im2haircut
 
 PORT=$((1000 + RANDOM % 5001))
 
